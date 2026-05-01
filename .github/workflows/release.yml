@@ -4,6 +4,7 @@ on:
   push:
     paths:
       - 'Dumps/Offsets.hpp'
+      - 'Offsets.hpp'
     branches:
       - main
 
@@ -12,33 +13,86 @@ jobs:
     runs-on: ubuntu-latest
     permissions:
       contents: write
+
     steps:
-      - name: Checkout code
+      - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Extract Version
-        id: get_version
+      - name: Extract version and stats
+        id: info
         run: |
-          # Extract version from the comment in Offsets.hpp
-          VERSION=$(grep -oP 'version-[a-f0-9]+' Dumps/Offsets.hpp | head -n 1)
+          # Prefer Dumps/Offsets.hpp, fall back to root Offsets.hpp
+          if [ -f "Dumps/Offsets.hpp" ]; then
+            FILE="Dumps/Offsets.hpp"
+          else
+            FILE="Offsets.hpp"
+          fi
+
+          echo "Using file: $FILE"
+
+          # Extract Roblox version string
+          VERSION=$(grep -oP 'version-[a-f0-9]+' "$FILE" | head -n 1)
           if [ -z "$VERSION" ]; then
             VERSION="v$(date +'%Y.%m.%d-%H%M')"
           fi
-          echo "VERSION=$VERSION" >> $GITHUB_OUTPUT
-          echo "Detected Version: $VERSION"
 
-      - name: Create Release
-        id: create_release
+          # Extract offset count from header comment
+          OFFSET_COUNT=$(grep -oP 'Offsets found\s+\K\d+' "$FILE" | head -n 1)
+          if [ -z "$OFFSET_COUNT" ]; then
+            # Fallback: count hex values
+            OFFSET_COUNT=$(grep -oP '0x[0-9A-Fa-f]+' "$FILE" | wc -l)
+          fi
+
+          # Extract dump date
+          DUMP_DATE=$(grep -oP 'Date\s+\K[\d\-]+ [\d:]+' "$FILE" | head -n 1)
+          if [ -z "$DUMP_DATE" ]; then
+            DUMP_DATE=$(date +'%Y-%m-%d %H:%M UTC')
+          fi
+
+          FILE_SIZE=$(du -sh "$FILE" | cut -f1)
+
+          echo "VERSION=$VERSION"       >> $GITHUB_OUTPUT
+          echo "OFFSET_COUNT=$OFFSET_COUNT" >> $GITHUB_OUTPUT
+          echo "DUMP_DATE=$DUMP_DATE"   >> $GITHUB_OUTPUT
+          echo "FILE=$FILE"             >> $GITHUB_OUTPUT
+          echo "FILE_SIZE=$FILE_SIZE"   >> $GITHUB_OUTPUT
+
+          echo "Detected: $VERSION | Offsets: $OFFSET_COUNT | Date: $DUMP_DATE"
+
+      - name: Delete existing release (if any)
+        run: |
+          gh release delete "${{ steps.info.outputs.VERSION }}" --yes 2>/dev/null || true
+          git push --delete origin "${{ steps.info.outputs.VERSION }}" 2>/dev/null || true
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Create GitHub Release
         uses: softprops/action-gh-release@v2
         with:
-          tag_name: ${{ steps.get_version.outputs.VERSION }}
-          name: Roblox Offsets - ${{ steps.get_version.outputs.VERSION }}
+          tag_name: ${{ steps.info.outputs.VERSION }}
+          name: "Roblox Offsets — ${{ steps.info.outputs.VERSION }}"
           body: |
-            Automated dump of Roblox memory offsets.
-            
-            **Version:** `${{ steps.get_version.outputs.VERSION }}`
-            **Date:** ${{ github.event.head_commit.timestamp }}
-          files: Dumps/Offsets.hpp
+            ## Orion Dumper — Automatic Offset Release
+
+            | Field | Value |
+            |-------|-------|
+            | **Roblox Version** | `${{ steps.info.outputs.VERSION }}` |
+            | **Offsets Found** | `${{ steps.info.outputs.OFFSET_COUNT }}` |
+            | **File Size** | `${{ steps.info.outputs.FILE_SIZE }}` |
+            | **Dump Date** | ${{ steps.info.outputs.DUMP_DATE }} |
+            | **Commit** | [`${{ github.sha }}`](${{ github.event.compare }}) |
+
+            ### Usage
+            ```cpp
+            #include "Offsets.hpp"
+            // All offsets are relative to the Roblox module base.
+            // Use REBASE(offset) to get absolute addresses at runtime.
+            uintptr_t luaState = REBASE(Offsets::LuaState);
+            ```
+
+            > **Auto-generated** by [Ghidra-Roblox-Internal-Dumper](https://github.com/${{ github.repository }})
+          files: |
+            ${{ steps.info.outputs.FILE }}
           draft: false
           prerelease: false
         env:
