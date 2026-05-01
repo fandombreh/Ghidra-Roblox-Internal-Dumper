@@ -1,4 +1,4 @@
-# 🌌 Orion: Advanced Roblox Internal Dumper
+#  Orion: Advanced Roblox Internal Dumper
 
 <p align="center">
   <img src="https://img.shields.io/badge/Roblox-Dumper-blue?style=for-the-badge&logo=roblox" alt="Roblox Dumper">
@@ -9,35 +9,35 @@
 
 ---
 
-## 🚀 Overview
+##  Overview
 
 **Orion** is a high-performance internal memory dumper and analysis suite for Roblox. It combines kernel-level memory access, advanced DLL injection techniques, and Ghidra-powered static analysis to provide the most comprehensive data extraction possible.
 
-### ✨ Key Features
+###  Key Features
 
-- 🛠️ **Kernel-Level Access**: Read/Write memory through a custom driver to bypass common protections.
-- 💉 **Stealth Injection**: Manual mapping and standard injection methods.
-- 🔍 **Deep Scanning**: Automatic discovery of Luau VM internals, class vtables, and function prologues.
-- 📊 **Ghidra Integration**: Custom scripts to automatically analyze and define structures in Ghidra.
-- 📂 **Massive Offset Discovery**: Capable of finding 47,000+ unique memory references.
+- **Kernel-Level Access**: Read/Write memory through a custom driver to bypass common protections.
+- **Stealth Injection**: Manual mapping and standard injection methods.
+- **Deep Scanning**: Automatic discovery of Luau VM internals, class vtables, and function prologues.
+- **Ghidra Integration**: Custom scripts to automatically analyze and define structures in Ghidra.
+-  **Massive Offset Discovery**: Capable of finding 47,000+ unique memory references.
 
 ---
 
-## 📂 Project Structure
+##  Project Structure
 
 ```text
 .
-├── 🛡️ Kernel/           # Kernel driver for low-level access (is not in use)
-├── 💉 Injection/        # DLL injection utilities
-├── 📥 Dumping/          # Roblox structure dumping & scanning
-├── 🐍 Ghidra/           # Ghidra Python analysis scripts
-├── 📄 Dumps/           # Latest memory offsets and data
-└── 🛠️ CMakeLists.txt    # Main build configuration
+├── Kernel/           # Kernel driver for low-level access (is not in use)
+├── Injection/        # DLL injection utilities
+├── Dumping/          # Roblox structure dumping & scanning
+├── Ghidra/           # Ghidra Python analysis scripts
+├── Dumps/           # Latest memory offsets and data
+└── CMakeLists.txt    # Main build configuration
 ```
 
 ---
 
-## 📊 Latest Offsets (LIVE)
+##  Latest Offsets (LIVE)
 
 The repository includes a pre-generated `Offsets.hpp` containing the latest discovered addresses for the current Roblox version.
 
@@ -50,7 +50,7 @@ The repository includes a pre-generated `Offsets.hpp` containing the latest disc
 
 ---
 
-## 🛠️ Installation & Building
+##  Installation & Building
 
 ### Prerequisites
 
@@ -71,7 +71,7 @@ cmake --build build --config Release
 
 ---
 
-## 📖 Usage Guide
+## Usage Guide
 
 ### 1. Dumping Offsets
 Run the dumper against a running Roblox process to generate a new `Offsets.hpp`:
@@ -87,7 +87,7 @@ Run the dumper against a running Roblox process to generate a new `Offsets.hpp`:
 
 ---
 
-## 🛡️ Disclaimer
+## Disclaimer
 
 This project is for **educational and research purposes only**. Use responsibly and in accordance with Roblox's Terms of Service. The authors are not responsible for any misuse or damages resulting from this tool.
 
