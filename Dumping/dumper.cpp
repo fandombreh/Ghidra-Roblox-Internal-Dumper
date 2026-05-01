@@ -10,6 +10,7 @@
 #include <iomanip>
 #include <chrono>
 #include <algorithm>
+#include <filesystem>
 #include "kernel_client.h"
 
 #pragma comment(lib, "psapi.lib")
@@ -2019,6 +2020,33 @@ int main(int argc, char* argv[]) {
         dumper.SaveDump(outputFile);
 
         std::cout << "\nDump complete!\n";
+
+        // Auto-create GitHub release
+        std::cout << "Creating GitHub release...\n";
+        std::string version = dumper.GetVersion();
+        if (version.empty() || version == "Unknown") {
+            version = "latest";
+        }
+
+        std::filesystem::path releaseScript = "Create-Release.ps1";
+        if (!std::filesystem::exists(releaseScript)) {
+            releaseScript = "..\\Create-Release.ps1";
+        }
+
+        if (!std::filesystem::exists(releaseScript)) {
+            std::cerr << "Create-Release.ps1 not found. Skipping GitHub release.\n";
+        } else {
+            std::string psCommand = "powershell -ExecutionPolicy Bypass -File \"";
+            psCommand += releaseScript.string() + "\" ";
+            psCommand += "-OffsetsFile \"" + outputFile + "\" ";
+            psCommand += "-Version \"" + version + "\"";
+
+            std::cout << "Running: " << psCommand << "\n";
+            int releaseExitCode = system(psCommand.c_str());
+            if (releaseExitCode != 0) {
+                std::cerr << "GitHub release step failed with exit code " << releaseExitCode << "\n";
+            }
+        }
     } catch (const std::exception& e) {
         std::cerr << "Error: " << e.what() << "\n";
         std::cout << "\nPress Enter to exit...";
