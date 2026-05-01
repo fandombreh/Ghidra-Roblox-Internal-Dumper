@@ -1,0 +1,50 @@
+# Build directories
+build/
+bin/
+obj/
+out/
+x64/
+x86/
+ARM/
+ARM64/
+
+# Visual Studio files
+.vs/
+*.sln
+*.vcxproj
+*.vcxproj.filters
+*.vcxproj.user
+*.db
+*.opendb
+*.sdf
+*.suo
+*.user
+*.userosscache
+*.sln.docstates
+*.aps
+
+# Ghidra files
+*.gpr
+*.rep/
+
+# Python files
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Temporary files
+*.tmp
+*.log
+*.bak
+*.swp
+*~
+
+# Operating System files
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+.DS_Store
+
+# Local configuration
+.windsurf/
+.gemini/
