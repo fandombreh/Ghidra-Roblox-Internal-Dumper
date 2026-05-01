@@ -11,6 +11,7 @@
 #include <chrono>
 #include <algorithm>
 #include <filesystem>
+#include <sstream>
 #include "kernel_client.h"
 
 #pragma comment(lib, "psapi.lib")
@@ -30,6 +31,77 @@ struct RobloxInstance {
     std::vector<RobloxInstance> children;
 };
 
+struct DumperConfig {
+    size_t versionScanRange = 0x10000000;
+    size_t dataModelScanRange = 0x05000000;
+    size_t classScanRange = 0x20000000;
+    size_t namedFunctionScanRange = 0x10000000;
+    int maxInstanceDepth = 100;
+    bool autoCreateRelease = true;
+    std::string releaseScriptPath = "Create-Release.ps1";
+    std::string releaseScriptFallbackPath = "..\\Create-Release.ps1";
+};
+
+static std::string Trim(const std::string& value) {
+    const char* whitespace = " \t\r\n";
+    const size_t start = value.find_first_not_of(whitespace);
+    if (start == std::string::npos) return "";
+    const size_t end = value.find_last_not_of(whitespace);
+    return value.substr(start, end - start + 1);
+}
+
+static bool ParseBool(const std::string& value, bool fallback) {
+    const std::string lower = [&value]() {
+        std::string output = value;
+        std::transform(output.begin(), output.end(), output.begin(), [](unsigned char c) { return static_cast<char>(std::tolower(c)); });
+        return output;
+    }();
+    if (lower == "1" || lower == "true" || lower == "yes" || lower == "on") return true;
+    if (lower == "0" || lower == "false" || lower == "no" || lower == "off") return false;
+    return fallback;
+}
+
+static size_t ParseNumber(const std::string& value, size_t fallback) {
+    try {
+        return static_cast<size_t>(std::stoull(value, nullptr, 0));
+    } catch (...) {
+        return fallback;
+    }
+}
+
+static DumperConfig LoadConfigFromFile(const std::string& configPath) {
+    DumperConfig config;
+    std::ifstream file(configPath);
+    if (!file.is_open()) {
+        return config;
+    }
+
+    std::string line;
+    while (std::getline(file, line)) {
+        line = Trim(line);
+        if (line.empty()) continue;
+        if (line[0] == '#' || line[0] == ';') continue;
+
+        const size_t separator = line.find('=');
+        if (separator == std::string::npos) continue;
+
+        const std::string key = Trim(line.substr(0, separator));
+        const std::string value = Trim(line.substr(separator + 1));
+        if (key.empty()) continue;
+
+        if (key == "version_scan_range") config.versionScanRange = ParseNumber(value, config.versionScanRange);
+        else if (key == "datamodel_scan_range") config.dataModelScanRange = ParseNumber(value, config.dataModelScanRange);
+        else if (key == "class_scan_range") config.classScanRange = ParseNumber(value, config.classScanRange);
+        else if (key == "named_function_scan_range") config.namedFunctionScanRange = ParseNumber(value, config.namedFunctionScanRange);
+        else if (key == "max_instance_depth") config.maxInstanceDepth = static_cast<int>(ParseNumber(value, config.maxInstanceDepth));
+        else if (key == "auto_create_release") config.autoCreateRelease = ParseBool(value, config.autoCreateRelease);
+        else if (key == "release_script_path") config.releaseScriptPath = value;
+        else if (key == "release_script_fallback_path") config.releaseScriptFallbackPath = value;
+    }
+
+    return config;
+}
+
 class RobloxDumper {
 private:
     HANDLE hProcess;
@@ -40,9 +112,11 @@ private:
     std::map<std::string, RobloxClass> classes;
     KernelClient kernel;
     bool useKernel;
+    DumperConfig config;
 
 public:
-    RobloxDumper() : hProcess(NULL), processId(0), robloxBase(0), dataModel(0), useKernel(false), robloxVersion("Unknown") {}
+    explicit RobloxDumper(const DumperConfig& dumperConfig = DumperConfig())
+        : hProcess(NULL), processId(0), robloxBase(0), dataModel(0), robloxVersion("Unknown"), useKernel(false), config(dumperConfig) {}
 
     ~RobloxDumper() {
         if (hProcess) {
@@ -96,7 +170,7 @@ public:
                 }
             }
             addr += mbi.RegionSize;
-            if (addr >= robloxBase + 0x10000000) break; 
+            if (addr >= robloxBase + config.versionScanRange) break; 
         }
         return false;
     }
@@ -238,7 +312,7 @@ public:
         
         std::string dataModelStr = "DataModel";
         uintptr_t scanStart = robloxBase;
-        uintptr_t scanEnd = robloxBase + 0x5000000;
+        uintptr_t scanEnd = robloxBase + config.dataModelScanRange;
 
         for (uintptr_t addr = scanStart; addr < scanEnd && addr >= scanStart; addr += 0x1000) {
             char buffer[4096];
@@ -265,7 +339,7 @@ public:
         std::cout << "Scanning for meaningful offsets...\n";
 
         uintptr_t scanStart = robloxBase;
-        uintptr_t scanEnd = robloxBase + 0x20000000; 
+        uintptr_t scanEnd = robloxBase + config.classScanRange; 
 
         
         std::vector<std::string> targetStrings = {
@@ -611,7 +685,7 @@ public:
         };
 
         for (const auto& fp : functionPatterns) {
-            uintptr_t addr = ScanPattern(scanStart, 0x10000000, fp.pattern); 
+            uintptr_t addr = ScanPattern(scanStart, config.namedFunctionScanRange, fp.pattern); 
             if (addr != 0) {
                 RobloxClass cls;
                 cls.name = "Function_" + fp.name;
@@ -627,7 +701,7 @@ done:
     }
 
     bool TraverseInstanceTree(uintptr_t instanceAddr, RobloxInstance& instance, int depth = 0) {
-        if (depth > 100) return false; 
+        if (depth > config.maxInstanceDepth) return false; 
 
         
         uintptr_t classNamePtr = 0;
@@ -727,7 +801,7 @@ done:
         
         
         
-        auto writeOffset = [&](const std::string& name, bool useRebase = true, uintptr_t  = 0, const std::string& indent = "    ") {
+        auto writeOffset = [&](const std::string& name, bool useRebase = true, const std::string& indent = "    ") {
             uintptr_t offset = 0;
             std::string funcName = "Function_" + name;
             if (functionOffsets.count(funcName)) {
@@ -743,10 +817,10 @@ done:
             return false;
         };
 
-        writeOffset("Print", true, 0x1DEA8D0);
-        writeOffset("OpcodeLookupTable", true, 0x63FB7F0);
-        writeOffset("ScriptContextResume", true, 0x1D64240);
-        writeOffset("GetLuaStateForInstance", true, 0x1C33F90);
+        writeOffset("Print", true);
+        writeOffset("OpcodeLookupTable", true);
+        writeOffset("ScriptContextResume", true);
+        writeOffset("GetLuaStateForInstance", true);
         file << "\n";
 
         
@@ -760,14 +834,14 @@ done:
             file << "         inline constexpr uintptr_t " << cleanName << " = REBASE(0x" << std::hex << offset << ");\n";
         }
         file << "    }\n\n";
-        writeOffset("Luau_Execute", true, 0x1D29E60);
-        writeOffset("fireclickdetector", true, 0x1D29E60);
-        writeOffset("firetouchinterest", true, 0x1D29E60);
-        writeOffset("loadstring", true, 0x1D29E60);
-        writeOffset("getrawmetatable", true, 0x1D29E60);
-        writeOffset("setrawmetatable", true, 0x1D29E60);
-        writeOffset("getService", true, 0x1D29E60);
-        writeOffset("findFirstChild", true, 0x1D29E60);
+        writeOffset("Luau_Execute", true);
+        writeOffset("fireclickdetector", true);
+        writeOffset("firetouchinterest", true);
+        writeOffset("loadstring", true);
+        writeOffset("getrawmetatable", true);
+        writeOffset("setrawmetatable", true);
+        writeOffset("getService", true);
+        writeOffset("findFirstChild", true);
         file << "\n";
 
         file << "    namespace AirProperties {\n";
@@ -926,7 +1000,7 @@ done:
         file << "    }\n\n";
 
         file << "    namespace FakeDataModel {\n";
-        writeOffset("Pointer", true, 0x7c1a148, "         ");
+        writeOffset("Pointer", true, "         ");
         file << "         inline constexpr uintptr_t RealDataModel = 0x1d0;\n";
         file << "    }\n\n";
 
@@ -1613,8 +1687,8 @@ done:
         file << "    }\n\n";
 
         file << "    namespace FLog {\n";
-        writeOffset("FLog_Default", true, 0x0, "         ");
-        writeOffset("DFLog_Default", true, 0x0, "         ");
+        writeOffset("FLog_Default", true, "         ");
+        writeOffset("DFLog_Default", true, "         ");
         file << "         inline constexpr uintptr_t Value = 0x8;\n";
         file << "    }\n\n";
 
@@ -1639,7 +1713,7 @@ done:
         file << "         inline constexpr uintptr_t InputObject = 0x100;\n";
         file << "         inline constexpr uintptr_t InputObject2 = 0x110;\n";
         file << "         inline constexpr uintptr_t MousePosition = 0xec;\n";
-        writeOffset("SensitivityPointer", true, 0x7cb9ad0, "         ");
+        writeOffset("SensitivityPointer", true, "         ");
         file << "    }\n\n";
 
         file << "    namespace ParticleEmitter {\n";
@@ -1682,7 +1756,7 @@ done:
         file << "    }\n\n";
 
         file << "    namespace PlayerConfigurer {\n";
-        writeOffset("Pointer", true, 0x7bee8e8, "         ");
+        writeOffset("Pointer", true, "         ");
         file << "    }\n\n";
 
         file << "    namespace PlayerMouse {\n";
@@ -1818,7 +1892,7 @@ done:
         file << "         inline constexpr uintptr_t JobName = 0x18;\n";
         file << "         inline constexpr uintptr_t JobStart = 0xc8;\n";
         file << "         inline constexpr uintptr_t MaxFPS = 0xb0;\n";
-        writeOffset("Pointer", true, 0x7cf5400, "         ");
+        writeOffset("Pointer", true, "         ");
         file << "         inline constexpr uintptr_t TaskSchedulerTargetFps = 0x118;\n";
         file << "         inline constexpr uintptr_t RenderJob = 0x10;\n";
         file << "         inline constexpr uintptr_t PhysicsJob = 0x18;\n";
@@ -1873,7 +1947,7 @@ done:
         file << "    namespace VisualEngine {\n";
         file << "         inline constexpr uintptr_t Dimensions = 0xa90;\n";
         file << "         inline constexpr uintptr_t FakeDataModel = 0xa70;\n";
-        writeOffset("Pointer", true, 0x77c6670, "         ");
+        writeOffset("Pointer", true, "         ");
         file << "         inline constexpr uintptr_t RenderView = 0xb70;\n";
         file << "         inline constexpr uintptr_t ViewMatrix = 0x130;\n";
         file << "         inline constexpr uintptr_t ProjectionMatrix = 0x170;\n";
@@ -1949,6 +2023,7 @@ int main(int argc, char* argv[]) {
     std::cout << "============================\n\n";
 
     try {
+        DumperConfig config = LoadConfigFromFile("dumper.config");
         DWORD pid = 0;
         std::string outputFile = "Offsets.hpp";
 
@@ -1960,7 +2035,7 @@ int main(int argc, char* argv[]) {
                 pid = std::stoul(target);
             } catch (...) {
                 
-                RobloxDumper tempDumper;
+                RobloxDumper tempDumper(config);
                 pid = tempDumper.FindProcessByName(target);
                 if (pid == 0) {
                     std::cerr << "Process not found: " << target << "\n";
@@ -1976,7 +2051,7 @@ int main(int argc, char* argv[]) {
             }
         } else {
             
-            RobloxDumper tempDumper;
+            RobloxDumper tempDumper(config);
             pid = tempDumper.FindRobloxProcess();
             if (pid == 0) {
                 std::cerr << "No Roblox process found. Please make sure Roblox is running.\n";
@@ -1986,7 +2061,7 @@ int main(int argc, char* argv[]) {
             }
         }
 
-        RobloxDumper dumper;
+        RobloxDumper dumper(config);
         
         
         std::cout << "Attempting to connect to kernel driver...\n";
@@ -2026,30 +2101,34 @@ int main(int argc, char* argv[]) {
         std::cout << "\nDump complete!\n";
 
         
-        std::cout << "Creating GitHub release...\n";
-        std::string version = dumper.GetVersion();
-        if (version.empty() || version == "Unknown") {
-            version = "latest";
-        }
-
-        std::filesystem::path releaseScript = "Create-Release.ps1";
-        if (!std::filesystem::exists(releaseScript)) {
-            releaseScript = "..\\Create-Release.ps1";
-        }
-
-        if (!std::filesystem::exists(releaseScript)) {
-            std::cerr << "Create-Release.ps1 not found. Skipping GitHub release.\n";
-        } else {
-            std::string psCommand = "powershell -ExecutionPolicy Bypass -File \"";
-            psCommand += releaseScript.string() + "\" ";
-            psCommand += "-OffsetsFile \"" + outputFile + "\" ";
-            psCommand += "-Version \"" + version + "\"";
-
-            std::cout << "Running: " << psCommand << "\n";
-            int releaseExitCode = system(psCommand.c_str());
-            if (releaseExitCode != 0) {
-                std::cerr << "GitHub release step failed with exit code " << releaseExitCode << "\n";
+        if (config.autoCreateRelease) {
+            std::cout << "Creating GitHub release...\n";
+            std::string version = dumper.GetVersion();
+            if (version.empty() || version == "Unknown") {
+                version = "latest";
             }
+
+            std::filesystem::path releaseScript = config.releaseScriptPath;
+            if (!std::filesystem::exists(releaseScript)) {
+                releaseScript = config.releaseScriptFallbackPath;
+            }
+
+            if (!std::filesystem::exists(releaseScript)) {
+                std::cerr << "Create-Release.ps1 not found. Skipping GitHub release.\n";
+            } else {
+                std::string psCommand = "powershell -ExecutionPolicy Bypass -File \"";
+                psCommand += releaseScript.string() + "\" ";
+                psCommand += "-OffsetsFile \"" + outputFile + "\" ";
+                psCommand += "-Version \"" + version + "\"";
+
+                std::cout << "Running: " << psCommand << "\n";
+                int releaseExitCode = system(psCommand.c_str());
+                if (releaseExitCode != 0) {
+                    std::cerr << "GitHub release step failed with exit code " << releaseExitCode << "\n";
+                }
+            }
+        } else {
+            std::cout << "Auto release disabled by config.\n";
         }
     } catch (const std::exception& e) {
         std::cerr << "Error: " << e.what() << "\n";

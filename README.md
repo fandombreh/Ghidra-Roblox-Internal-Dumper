@@ -84,6 +84,8 @@ Run the dumper against a running Roblox process to generate a new `Offsets.hpp`:
 ./build/Dumping/Release/Dumper.exe <RobloxPID>
 ```
 
+Optional: copy `dumper.config.example` to `dumper.config` to override scan ranges, recursion depth, and auto-release behavior without recompiling.
+
 ### 2. Ghidra Analysis
 1. Load `RobloxPlayerBeta.exe` into Ghidra.
 2. Run `Auto Analysis`.

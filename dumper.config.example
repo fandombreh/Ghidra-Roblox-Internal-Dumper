@@ -1,0 +1,8 @@
+version_scan_range=0x10000000
+datamodel_scan_range=0x05000000
+class_scan_range=0x20000000
+named_function_scan_range=0x10000000
+max_instance_depth=100
+auto_create_release=true
+release_script_path=Create-Release.ps1
+release_script_fallback_path=..\Create-Release.ps1
