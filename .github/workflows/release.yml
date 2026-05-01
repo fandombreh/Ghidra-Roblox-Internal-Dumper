@@ -1,0 +1,45 @@
+name: Auto Release Offsets
+
+on:
+  push:
+    paths:
+      - 'Dumps/Offsets.hpp'
+    branches:
+      - main
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Extract Version
+        id: get_version
+        run: |
+          # Extract version from the comment in Offsets.hpp
+          VERSION=$(grep -oP 'version-[a-f0-9]+' Dumps/Offsets.hpp | head -n 1)
+          if [ -z "$VERSION" ]; then
+            VERSION="v$(date +'%Y.%m.%d-%H%M')"
+          fi
+          echo "VERSION=$VERSION" >> $GITHUB_OUTPUT
+          echo "Detected Version: $VERSION"
+
+      - name: Create Release
+        id: create_release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ steps.get_version.outputs.VERSION }}
+          name: Roblox Offsets - ${{ steps.get_version.outputs.VERSION }}
+          body: |
+            Automated dump of Roblox memory offsets.
+            
+            **Version:** `${{ steps.get_version.outputs.VERSION }}`
+            **Date:** ${{ github.event.head_commit.timestamp }}
+          files: Dumps/Offsets.hpp
+          draft: false
+          prerelease: false
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
