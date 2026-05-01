@@ -27,7 +27,7 @@
 
 ```text
 .
-├── 🛡️ Kernel/           # Kernel driver for low-level access
+├── 🛡️ Kernel/           # Kernel driver for low-level access (is not in use)
 ├── 💉 Injection/        # DLL injection utilities
 ├── 📥 Dumping/          # Roblox structure dumping & scanning
 ├── 🐍 Ghidra/           # Ghidra Python analysis scripts
