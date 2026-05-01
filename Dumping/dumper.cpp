@@ -101,6 +101,10 @@ public:
         return false;
     }
 
+    std::string GetVersion() const {
+        return robloxVersion;
+    }
+
     bool AttachToProcess(DWORD pid) {
         hProcess = OpenProcess(PROCESS_QUERY_INFORMATION | PROCESS_VM_READ, FALSE, pid);
         if (!hProcess) {
