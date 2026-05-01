@@ -27,7 +27,7 @@ public:
             return false;
         }
 
-        // Create service
+        
         SC_HANDLE hService = CreateServiceA(
             hSCManager,
             serviceName.c_str(),
@@ -55,7 +55,7 @@ public:
             }
         }
 
-        // Start service
+        
         if (!StartServiceA(hService, 0, NULL)) {
             DWORD error = GetLastError();
             if (error != ERROR_SERVICE_ALREADY_RUNNING) {
@@ -112,7 +112,7 @@ public:
             return false;
         }
 
-        // Wait for dumper to complete
+        
         WaitForSingleObject(pi.hProcess, INFINITE);
         
         DWORD exitCode;
@@ -168,7 +168,7 @@ public:
             return false;
         }
 
-        // Allocate memory in target process
+        
         SIZE_T pathLen = dllPath.length() + 1;
         LPVOID pRemoteMemory = VirtualAllocEx(hProcess, NULL, pathLen, MEM_COMMIT | MEM_RESERVE, PAGE_READWRITE);
         if (!pRemoteMemory) {
@@ -176,14 +176,14 @@ public:
             return false;
         }
 
-        // Write DLL path to target process
+        
         if (!WriteProcessMemory(hProcess, pRemoteMemory, dllPath.c_str(), pathLen, NULL)) {
             std::cerr << "Failed to write DLL path to target process\n";
             VirtualFreeEx(hProcess, pRemoteMemory, 0, MEM_RELEASE);
             return false;
         }
 
-        // Get LoadLibraryA address
+        
         HMODULE hKernel32 = GetModuleHandleA("kernel32.dll");
         LPVOID pLoadLibrary = (LPVOID)GetProcAddress(hKernel32, "LoadLibraryA");
         if (!pLoadLibrary) {
@@ -192,7 +192,7 @@ public:
             return false;
         }
 
-        // Create remote thread to load DLL
+        
         HANDLE hThread = CreateRemoteThread(hProcess, NULL, 0, (LPTHREAD_START_ROUTINE)pLoadLibrary, pRemoteMemory, 0, NULL);
         if (!hThread) {
             std::cerr << "Failed to create remote thread\n";
@@ -200,10 +200,10 @@ public:
             return false;
         }
 
-        // Wait for thread to complete
+        
         WaitForSingleObject(hThread, INFINITE);
         
-        // Cleanup
+        
         CloseHandle(hThread);
         VirtualFreeEx(hProcess, pRemoteMemory, 0, MEM_RELEASE);
 
@@ -243,7 +243,7 @@ public:
             return false;
         }
 
-        // Allocate memory in target process
+        
         LPVOID pRemoteImage = VirtualAllocEx(hProcess, NULL, pNtHeaders->OptionalHeader.SizeOfImage, MEM_COMMIT | MEM_RESERVE, PAGE_EXECUTE_READWRITE);
         if (!pRemoteImage) {
             std::cerr << "Failed to allocate memory for image\n";
@@ -251,10 +251,10 @@ public:
             return false;
         }
 
-        // Write headers
+        
         WriteProcessMemory(hProcess, pRemoteImage, pFileData, pNtHeaders->OptionalHeader.SizeOfHeaders, NULL);
 
-        // Write sections
+        
         PIMAGE_SECTION_HEADER pSectionHeader = IMAGE_FIRST_SECTION(pNtHeaders);
         for (WORD i = 0; i < pNtHeaders->FileHeader.NumberOfSections; i++) {
             LPVOID pSectionDest = (LPVOID)((BYTE*)pRemoteImage + pSectionHeader[i].VirtualAddress);
@@ -262,7 +262,7 @@ public:
             WriteProcessMemory(hProcess, pSectionDest, pSectionSrc, pSectionHeader[i].SizeOfRawData, NULL);
         }
 
-        // Perform relocation
+        
         IMAGE_DATA_DIRECTORY relocDir = pNtHeaders->OptionalHeader.DataDirectory[IMAGE_DIRECTORY_ENTRY_BASERELOC];
         if (relocDir.Size) {
             PIMAGE_BASE_RELOCATION pReloc = (PIMAGE_BASE_RELOCATION)((BYTE*)pFileData + relocDir.VirtualAddress);
@@ -284,7 +284,7 @@ public:
             }
         }
 
-        // Resolve imports (simplified)
+        
         IMAGE_DATA_DIRECTORY importDir = pNtHeaders->OptionalHeader.DataDirectory[IMAGE_DIRECTORY_ENTRY_IMPORT];
         if (importDir.Size) {
             PIMAGE_IMPORT_DESCRIPTOR pImport = (PIMAGE_IMPORT_DESCRIPTOR)((BYTE*)pFileData + importDir.VirtualAddress);
@@ -298,7 +298,7 @@ public:
                 
                 while (pOriginalThunk->u1.AddressOfData) {
                     if (pOriginalThunk->u1.Ordinal & IMAGE_ORDINAL_FLAG) {
-                        // Import by ordinal
+                        
                     } else {
                         PIMAGE_IMPORT_BY_NAME pImportName = (PIMAGE_IMPORT_BY_NAME)((BYTE*)pFileData + pOriginalThunk->u1.AddressOfData);
                         FARPROC pFunc = GetProcAddress(hRemoteModule, pImportName->Name);
@@ -336,7 +336,7 @@ int main(int argc, char* argv[]) {
 
     Injector injector(dllPath);
 
-    // Try to parse as PID first
+    
     DWORD pid = 0;
     try {
         pid = std::stoul(target);
@@ -358,11 +358,11 @@ int main(int argc, char* argv[]) {
         }
     }
 
-    // Load kernel driver if available
+    
     std::string driverPath = "RobloxDumperKernel.sys";
     std::string serviceName = "RobloxDumper";
     
-    // Check if driver file exists
+    
     DWORD attrib = GetFileAttributesA(driverPath.c_str());
     if (attrib != INVALID_FILE_ATTRIBUTES && !(attrib & FILE_ATTRIBUTE_DIRECTORY)) {
         std::cout << "Loading kernel driver...\n";
@@ -371,7 +371,7 @@ int main(int argc, char* argv[]) {
         std::cout << "Kernel driver not found, skipping...\n";
     }
 
-    // Run dumper
+    
     std::string dumperPath = "Dumper.exe";
     attrib = GetFileAttributesA(dumperPath.c_str());
     if (attrib != INVALID_FILE_ATTRIBUTES && !(attrib & FILE_ATTRIBUTE_DIRECTORY)) {
@@ -381,7 +381,7 @@ int main(int argc, char* argv[]) {
         std::cout << "Dumper not found, skipping...\n";
     }
 
-    // Inject DLL
+    
     if (useManualMap) {
         injector.ManualMapInject();
     } else {

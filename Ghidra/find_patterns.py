@@ -1,6 +1,6 @@
-# Ghidra script to find specific patterns in Roblox
-# @category RobloxDumper
-# @author RobloxDumper
+
+
+
 
 from ghidra.program.model.mem import MemoryAccessException
 
@@ -14,7 +14,7 @@ def find_pattern(byte_pattern, mask=None):
     """
     print(f"Searching for pattern: {byte_pattern}")
     
-    # Convert pattern to bytes
+
     pattern_bytes = []
     wildcards = []
     
@@ -29,7 +29,7 @@ def find_pattern(byte_pattern, mask=None):
     
     results = []
     
-    # Search through all memory blocks
+
     for block in currentProgram.getMemory().getBlocks():
         if not block.isInitialized():
             continue
@@ -37,7 +37,7 @@ def find_pattern(byte_pattern, mask=None):
         start = block.getStart().getOffset()
         end = block.getEnd().getOffset()
         
-        # Scan the block
+
         for offset in range(start, end - len(pattern_bytes) + 1):
             match = True
             for i, byte in enumerate(pattern_bytes):
@@ -61,7 +61,7 @@ def find_data_model():
     """Find DataModel references"""
     print("Searching for DataModel...")
     
-    # Common patterns for DataModel access
+
     patterns = [
         "48 8B 0D ?? ?? ?? ?? 48 85 C9 74 ?? 48 8B 01 FF 50 ??",
         "48 89 5C 24 ?? 48 89 6C 24 ?? 48 89 74 24 ?? 57 48 83 EC 20",

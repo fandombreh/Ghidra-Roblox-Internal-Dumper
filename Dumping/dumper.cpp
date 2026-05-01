@@ -63,7 +63,7 @@ public:
     bool FindVersion() {
         if (!hProcess) return false;
 
-        // Scan for "version-" string
+        
         std::string pattern = "version-";
         MEMORY_BASIC_INFORMATION mbi;
         uintptr_t addr = robloxBase;
@@ -74,12 +74,12 @@ public:
                 if (ReadProcessMemory(hProcess, mbi.BaseAddress, buffer.data(), mbi.RegionSize, NULL)) {
                     for (size_t i = 0; i < buffer.size() - 64; ++i) {
                         if (memcmp(&buffer[i], pattern.c_str(), pattern.length()) == 0) {
-                            // Found "version-", now extract the full version string
+                            
                             char versionBuf[64];
                             memcpy(versionBuf, &buffer[i], 64);
                             versionBuf[63] = '\0';
                             
-                            // Check if it's the full version string (usually 16 hex chars after version-)
+                            
                             std::string fullVersion = versionBuf;
                             size_t endPos = fullVersion.find_first_of(" \\\n\r\t\0");
                             if (endPos != std::string::npos) {
@@ -96,7 +96,7 @@ public:
                 }
             }
             addr += mbi.RegionSize;
-            if (addr >= robloxBase + 0x10000000) break; // Limit scan range
+            if (addr >= robloxBase + 0x10000000) break; 
         }
         return false;
     }
@@ -235,7 +235,7 @@ public:
     }
 
     bool FindDataModel() {
-        // Scan for "DataModel" string
+        
         std::string dataModelStr = "DataModel";
         uintptr_t scanStart = robloxBase;
         uintptr_t scanEnd = robloxBase + 0x5000000;
@@ -255,7 +255,7 @@ public:
             }
         }
 
-        // Fallback
+        
         dataModel = robloxBase;
         std::cout << "Using Roblox base as DataModel reference: 0x" << std::hex << dataModel << "\n";
         return true;
@@ -265,20 +265,20 @@ public:
         std::cout << "Scanning for meaningful offsets...\n";
 
         uintptr_t scanStart = robloxBase;
-        uintptr_t scanEnd = robloxBase + 0x20000000; // Scan 512MB (maximum)
+        uintptr_t scanEnd = robloxBase + 0x20000000; 
 
-        // Expanded target strings (restored for more offsets)
+        
         std::vector<std::string> targetStrings = {
-            // Roblox services
+            
             "Workspace", "Players", "Lighting", "ReplicatedStorage", "ReplicatedFirst",
             "StarterGui", "StarterPlayer", "StarterPlayerScripts", "StarterCharacterScripts",
             "Game", "Instance", "Part", "Model", "Humanoid", "Camera",
-            // Script types
+            
             "Script", "LocalScript", "ModuleScript",
-            // UI elements
+            
             "TextLabel", "TextButton", "Frame", "ScreenGui", "ScrollingFrame",
             "TextBox", "ImageButton", "ViewportFrame",
-            // Luau VM
+            
             "lua_State", "luaL_", "lua_", "luau_", "Luau",
             "bytecode", "proto", "closure", "upvalue", "env",
             "getglobal", "setglobal", "getfield", "setfield",
@@ -287,14 +287,14 @@ public:
             "GC", "garbage", "collect", "memory",
             "table", "array", "metatable", "__index", "__newindex",
             "thread", "coroutine", "resume", "yield",
-            // Common functions
+            
             "FindFirstChild", "WaitForChild", "GetService", "Children",
             "Destroy", "Clone", "Parent", "Name", "ClassName",
             "AncestryChanged", "ChildAdded", "ChildRemoved",
-            // Physics
+            
             "Velocity", "Position", "CFrame", "Anchored", "CanCollide",
             "Mass", "Size", "BrickColor",
-            // More classes
+            
             "BasePart", "BaseScript", "BaseGui", "BasePlayerGui",
             "CharacterAppearance", "CharacterMesh", "Character",
             "ContentProvider", "ContextActionService",
@@ -324,7 +324,7 @@ public:
             "UserInputService", "ValueBase", "VehicleSeat",
             "VehicleSimulation", "Weld", "WeldConstraint",
             "Workspace", "WrapService",
-            // More Luau
+            
             "luaV_execute", "luaV_concat", "luaV_equal",
             "luaV_lessthan", "luaV_gettable", "luaV_settable",
             "luaV_objlen", "luaV_mod", "luaV_pow",
@@ -384,20 +384,20 @@ public:
             "lua_upvalueid", "lua_upvaluejoin",
             "lua_sethook", "lua_gethook", "lua_gethookmask",
             "lua_gethookcount", "lua_gc",
-            // Network
+            
             "NetworkClient", "NetworkServer", "NetworkReplicator", "PlayerReplicator",
             "RemoteEvent", "RemoteFunction", "UnreliableRemoteEvent",
-            // Services
+            
             "RunService", "LogService", "Stats", "GuiService", "UserInputService",
             "ContextActionService", "HttpService", "AssetService", "TweenService",
             "ContentProvider", "PhysicsService", "Chat", "TextChatService",
             "VoiceChatService", "VRService", "ControllerService",
-            // Instance Members (Strings for xrefs)
+            
             "archivable", "name", "parent", "className", "children",
             "position", "size", "cframe", "velocity", "transparency",
             "reflectance", "canCollide", "anchored", "locked",
             "health", "maxHealth", "jump", "walkSpeed", "userId",
-            // More Instance Fields
+            
             "AssemblyLinearVelocity", "AssemblyAngularVelocity", "Mass", "CenterOfMass",
             "Friction", "Elasticity", "CustomPhysicalProperties", "CollisionGroup",
             "AbsolutePosition", "AbsoluteSize", "AbsoluteRotation", "ZIndex",
@@ -405,22 +405,22 @@ public:
             "Value", "Enabled", "Visible", "Active", "Modal",
             "CameraSubject", "CameraType", "FieldOfView", "NearPlaneZ",
             "Brightness", "Color", "Shadows", "GlobalShadows", "EnvironmentDiffuseScale",
-            // Critical Offsets
+            
             "Print", "OpcodeLookupTable", "ScriptContextResume", "GetLuaStateForInstance",
             "Luau_Execute", "LuaO_NilObject", "LuaH_DummyNode",
-            // Added Internal Offsets
+            
             "LuaState", "ExtraSpace", "Capabilities", "Identity", "Scheduler",
             "VisualEngine", "ViewMatrix", "ProjectionMatrix", "GetLuaState",
             "fireclickdetector", "firetouchinterest", "loadstring",
             "setrawmetatable", "getrawmetatable", "namecall", "index", "newindex",
             "CapabilitiesBypass", "IdentityPtr", "ScriptContext", "DataModel",
-            // Advanced Internals
+            
             "FLog", "DFLog", "FInt", "FString", "FFlag", "DFFlag",
             "LClosure", "CClosure", "Proto", "Table", "TValue",
             "GlobalState", "CallInfo", "UpVal", "CommonHeader",
             "RenderJob", "PhysicsJob", "DataModelJob", "HeartbeatJob",
             "SystemAddress", "RakPeer", "PeerId", "Port",
-            // Additional Roblox Classes
+            
             "Accoutrement", "Accessory", "Adornment", "AlignPosition", "AlignOrientation",
             "Atmosphere", "Attachment", "Backpack", "BallSocketConstraint", "Beam",
             "BloomEffect", "BlurEffect", "BodyColors", "BodyGyro", "BodyPosition",
@@ -455,7 +455,7 @@ public:
             "UIConstraint", "UIFlexLayout", "UniversalConstraint", "UserInputService",
             "Vector3Value", "VectorForce", "VehicleSeat", "VideoFrame",
             "ViewportFrame", "Weld", "WeldConstraint", "Workspace", "WrapService",
-            // More Luau Internals
+            
             "luaV_", "luaF_", "luaC_", "luaH_", "luaT_", "luaO_", "luaX_", "luaY_", "luaZ_",
             "luaopen_", "lua_push", "lua_get", "lua_set", "lua_raw", "lua_to", "lua_is",
             "lua_len", "lua_upvalue", "lua_sethook", "lua_gethook", "lua_error",
@@ -464,7 +464,7 @@ public:
             "lua_lessthan", "lua_rawequal", "lua_objlen", "lua_stringtonumber",
             "lua_toboolean", "lua_tointegerx", "lua_tonumberx", "lua_tolstring",
             "lua_topointer", "lua_tothread", "lua_touserdata", "lua_typename", "lua_type",
-            // More Property Names
+            
             "AbsolutePosition", "AbsoluteSize", "AbsoluteRotation", "Active",
             "Adornee", "AlignmentOrientation", "AlignmentPosition", "AllowAmbientOcclusion",
             "AlwaysOnTop", "AnchorPoint", "Anchored", "AngularVelocity",
@@ -555,8 +555,8 @@ public:
             "Z", "ZIndex", "ZoomDistance"
         };
 
-        // Scan for target strings with larger buffer for speed
-        const size_t bufferSize = 1048576; // 1MB buffer
+        
+        const size_t bufferSize = 1048576; 
         char* buffer = new char[bufferSize];
         
         for (const auto& str : targetStrings) {
@@ -583,12 +583,12 @@ public:
         
         delete[] buffer;
 
-        // Generic prologue scanning removed.
-        // It produced tens of thousands of unnamed Function_N entries that were
-        // not usable and bloated the output. Only the named pattern-matched
-        // functions in the section below are kept.
+        
+        
+        
+        
 
-        // Scan for specific named functions using patterns
+        
         std::cout << "Scanning for critical named functions...\n";
         struct FunctionPattern {
             std::string name;
@@ -611,7 +611,7 @@ public:
         };
 
         for (const auto& fp : functionPatterns) {
-            uintptr_t addr = ScanPattern(scanStart, 0x10000000, fp.pattern); // Scan first 256MB
+            uintptr_t addr = ScanPattern(scanStart, 0x10000000, fp.pattern); 
             if (addr != 0) {
                 RobloxClass cls;
                 cls.name = "Function_" + fp.name;
@@ -627,9 +627,9 @@ done:
     }
 
     bool TraverseInstanceTree(uintptr_t instanceAddr, RobloxInstance& instance, int depth = 0) {
-        if (depth > 100) return false; // Prevent infinite recursion
+        if (depth > 100) return false; 
 
-        // Read class name
+        
         uintptr_t classNamePtr = 0;
         ReadProcessMemory(hProcess, (LPCVOID)(instanceAddr + 0x10), &classNamePtr, sizeof(classNamePtr), NULL);
         
@@ -639,7 +639,7 @@ done:
             instance.className = std::string(className, strnlen(className, 256));
         }
 
-        // Read name
+        
         uintptr_t namePtr = 0;
         ReadProcessMemory(hProcess, (LPCVOID)(instanceAddr + 0x18), &namePtr, sizeof(namePtr), NULL);
         
@@ -650,10 +650,10 @@ done:
 
         instance.address = instanceAddr;
 
-        // Read parent
+        
         ReadProcessMemory(hProcess, (LPCVOID)(instanceAddr + 0x20), &instance.parent, sizeof(instance.parent), NULL);
 
-        // Read children
+        
         uintptr_t childrenPtr = 0;
         ReadProcessMemory(hProcess, (LPCVOID)(instanceAddr + 0x28), &childrenPtr, sizeof(childrenPtr), NULL);
 
@@ -724,16 +724,16 @@ done:
         file << "namespace Offsets\n";
         file << "{\n";
 
-        // Global/Main Offsets
-        // writeOffset: only writes the offset if it was ACTUALLY found at runtime by pattern scan.
-        // No hardcoded fallbacks — if not found, a comment is written instead.
-        auto writeOffset = [&](const std::string& name, bool useRebase = true, uintptr_t /*unused_fallback*/ = 0, const std::string& indent = "    ") {
+        
+        
+        
+        auto writeOffset = [&](const std::string& name, bool useRebase = true, uintptr_t  = 0, const std::string& indent = "    ") {
             uintptr_t offset = 0;
             std::string funcName = "Function_" + name;
             if (functionOffsets.count(funcName)) {
                 offset = functionOffsets[funcName];
             }
-            // No fallback: only real pattern-matched results are written
+            
 
             if (offset != 0) {
                 file << indent << "const uintptr_t " << name << " = " << (useRebase ? "REBASE(" : "") << "0x" << std::hex << offset << (useRebase ? ")" : "") << ";\n";
@@ -749,12 +749,12 @@ done:
         writeOffset("GetLuaStateForInstance", true, 0x1C33F90);
         file << "\n";
 
-        // Named function offsets (pattern-matched only)
+        
         file << "    namespace Functions {\n";
         for (const auto& [name, offset] : functionOffsets) {
             std::string cleanName = name;
             if (cleanName.find("Function_") == 0) cleanName = cleanName.substr(9);
-            // Skip any purely numeric names (leftover from old scanner)
+            
             bool isNumeric = !cleanName.empty() && std::all_of(cleanName.begin(), cleanName.end(), ::isdigit);
             if (isNumeric) continue;
             file << "         inline constexpr uintptr_t " << cleanName << " = REBASE(0x" << std::hex << offset << ");\n";
@@ -1955,11 +1955,11 @@ int main(int argc, char* argv[]) {
         if (argc >= 2) {
             std::string target = argv[1];
             
-            // Try to parse as PID first
+            
             try {
                 pid = std::stoul(target);
             } catch (...) {
-                // If parsing fails, treat as process name
+                
                 RobloxDumper tempDumper;
                 pid = tempDumper.FindProcessByName(target);
                 if (pid == 0) {
@@ -1975,7 +1975,7 @@ int main(int argc, char* argv[]) {
                 outputFile = argv[2];
             }
         } else {
-            // Auto-detect Roblox process
+            
             RobloxDumper tempDumper;
             pid = tempDumper.FindRobloxProcess();
             if (pid == 0) {
@@ -1988,7 +1988,7 @@ int main(int argc, char* argv[]) {
 
         RobloxDumper dumper;
         
-        // Try to connect to kernel driver first
+        
         std::cout << "Attempting to connect to kernel driver...\n";
         if (dumper.ConnectKernel()) {
             std::cout << "Using kernel driver for memory access\n";
@@ -2025,7 +2025,7 @@ int main(int argc, char* argv[]) {
 
         std::cout << "\nDump complete!\n";
 
-        // Auto-create GitHub release
+        
         std::cout << "Creating GitHub release...\n";
         std::string version = dumper.GetVersion();
         if (version.empty() || version == "Unknown") {

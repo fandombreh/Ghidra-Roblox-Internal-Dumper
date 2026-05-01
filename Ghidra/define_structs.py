@@ -1,6 +1,6 @@
-# Ghidra script to define Roblox structures
-# @category RobloxDumper
-# @author RobloxDumper
+
+
+
 
 from ghidra.program.model.data import StructureDataType, PointerDataType, QWordDataType, DWordDataType, ByteDataType, CharDataType
 from ghidra.program.model.symbol import SourceType
@@ -9,7 +9,7 @@ def create_instance_struct():
     """Create the Instance structure definition"""
     print("Creating Instance structure...")
     
-    # These offsets are examples - adjust based on actual reversing
+
     struct = StructureDataType("Instance", 0)
     
     struct.add(PointerDataType(), 0, "vtable", None)
@@ -23,7 +23,7 @@ def create_instance_struct():
     struct.add(ByteDataType(), 43, "reserved2", None)
     struct.add(QWordDataType(), 48, "refCount", None)
     
-    # Add to program
+
     dtm = currentProgram.getDataTypeManager()
     existing = dtm.getDataType(struct.getCategoryPath(), struct.getName())
     if existing:
@@ -38,10 +38,10 @@ def create_part_struct():
     """Create the Part structure definition"""
     print("Creating Part structure...")
     
-    # Part extends Instance
+
     struct = StructureDataType("Part", 0)
     
-    # Instance fields
+
     struct.add(PointerDataType(), 0, "vtable", None)
     struct.add(PointerDataType(), 8, "className", None)
     struct.add(PointerDataType(), 16, "name", None)
@@ -53,11 +53,11 @@ def create_part_struct():
     struct.add(ByteDataType(), 43, "reserved2", None)
     struct.add(QWordDataType(), 48, "refCount", None)
     
-    # Part-specific fields
-    struct.add(QWordDataType(), 56, "position", None)  # Vector3
-    struct.add(QWordDataType(), 64, "rotation", None)  # Vector3
-    struct.add(QWordDataType(), 72, "size", None)      # Vector3
-    struct.add(QWordDataType(), 80, "cframe", None)    # CFrame
+
+    struct.add(QWordDataType(), 56, "position", None)
+    struct.add(QWordDataType(), 64, "rotation", None)
+    struct.add(QWordDataType(), 72, "size", None)
+    struct.add(QWordDataType(), 80, "cframe", None)
     struct.add(DWordDataType(), 88, "shape", None)
     struct.add(DWordDataType(), 92, "material", None)
     struct.add(DWordDataType(), 96, "brickColor", None)
@@ -78,7 +78,7 @@ def create_model_struct():
     
     struct = StructureDataType("Model", 0)
     
-    # Instance fields
+
     struct.add(PointerDataType(), 0, "vtable", None)
     struct.add(PointerDataType(), 8, "className", None)
     struct.add(PointerDataType(), 16, "name", None)
@@ -90,7 +90,7 @@ def create_model_struct():
     struct.add(ByteDataType(), 43, "reserved2", None)
     struct.add(QWordDataType(), 48, "refCount", None)
     
-    # Model-specific fields
+
     struct.add(QWordDataType(), 56, "primaryPart", None)
     struct.add(DWordDataType(), 64, "modelScale", None)
     
@@ -108,10 +108,10 @@ def apply_struct_to_data():
     """Apply structures to known data locations"""
     print("Applying structures to data...")
     
-    # This would require knowing actual addresses
-    # Example:
-    # addr = toAddr(0x12345678)
-    # createData(addr, Instance)
+
+
+
+
     
     print("Manual application required - use the structure definitions")
 

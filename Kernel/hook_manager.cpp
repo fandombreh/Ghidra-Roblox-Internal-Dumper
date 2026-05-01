@@ -23,25 +23,25 @@ NTSTATUS InstallHook(void* targetFunction, void* hookFunction, PHOOK_CONTEXT* ou
     context->OriginalFunction = targetFunction;
     context->HookFunction = hookFunction;
     
-    // Create trampoline
+    
     context->Trampoline = ExAllocatePoolWithTag(NonPagedPool, 16, 'TRAM');
     if (!context->Trampoline) {
         ExFreePoolWithTag(context, 'HOOK');
         return STATUS_INSUFFICIENT_RESOURCES;
     }
     
-    // Copy original bytes to trampoline
+    
     RtlCopyMemory(context->Trampoline, targetFunction, 16);
     
-    // Write jump to hook function (x64: 12 bytes)
+    
     UCHAR* patch = (UCHAR*)targetFunction;
     
-    // mov rax, hookFunction
+    
     patch[0] = 0x48;
     patch[1] = 0xB8;
     *(UINT64*)&patch[2] = (UINT64)hookFunction;
     
-    // jmp rax
+    
     patch[10] = 0xFF;
     patch[11] = 0xE0;
     
@@ -57,10 +57,10 @@ NTSTATUS RemoveHook(PHOOK_CONTEXT context) {
         return STATUS_INVALID_PARAMETER;
     }
     
-    // Restore original bytes
+    
     RtlCopyMemory(context->OriginalFunction, context->Trampoline, 16);
     
-    // Free memory
+    
     ExFreePoolWithTag(context->Trampoline, 'TRAM');
     ExFreePoolWithTag(context, 'HOOK');
     

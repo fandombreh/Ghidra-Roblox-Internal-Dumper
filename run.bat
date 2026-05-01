@@ -8,7 +8,7 @@ echo    Orion Dumper - Roblox Offset Extractor
 echo  =========================================
 echo.
 
-:: ─── Locate Dumper.exe ───────────────────────────────────────────────────────
+
 set "DUMPER_EXE="
 
 if exist "build\Dumping\Release\Dumper.exe"     set "DUMPER_EXE=build\Dumping\Release\Dumper.exe"
@@ -29,7 +29,7 @@ echo [Orion] Found dumper: %DUMPER_EXE%
 echo [Orion] Starting dump...
 echo.
 
-:: ─── Run the Dumper ──────────────────────────────────────────────────────────
+
 "%DUMPER_EXE%"
 set "DUMP_EXIT=%ERRORLEVEL%"
 
@@ -43,7 +43,7 @@ if %DUMP_EXIT% NEQ 0 (
 echo [Orion] Dump completed successfully.
 echo.
 
-:: ─── Check if Offsets.hpp was produced ───────────────────────────────────────
+
 set "OFFSETS_FOUND=0"
 if exist "Dumps\Offsets.hpp" set "OFFSETS_FOUND=1"
 if exist "Offsets.hpp"       set "OFFSETS_FOUND=1"
@@ -54,14 +54,14 @@ if "%OFFSETS_FOUND%"=="0" (
     exit /b 0
 )
 
-:: ─── Auto-publish countdown ──────────────────────────────────────────────────
+
 echo  =========================================
 echo    Auto-publishing to GitHub in 10 seconds
 echo    Press CTRL+C to cancel
 echo  =========================================
 echo.
 
-:: Countdown using ping delay trick (works without timeout.exe)
+
 for /L %%i in (10,-1,1) do (
     <nul set /p "=  Publishing in %%i seconds...   ^r"
     ping -n 2 127.0.0.1 >nul
@@ -69,7 +69,7 @@ for /L %%i in (10,-1,1) do (
 echo.
 echo.
 
-:: ─── Publish ─────────────────────────────────────────────────────────────────
+
 echo [Orion] Launching publisher...
 echo.
 python publish.py

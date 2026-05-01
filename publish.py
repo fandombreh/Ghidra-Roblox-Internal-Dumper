@@ -5,16 +5,16 @@ import sys
 import shutil
 from datetime import datetime
 
-# Force UTF-8 encoding for stdout
+
 if hasattr(sys.stdout, 'reconfigure'):
     sys.stdout.reconfigure(encoding='utf-8', errors='replace')
 
 REPO = "fandombreh/Ghidra-Roblox-Internal-Dumper"
 OFFSET_FILES = ["Dumps/Offsets.hpp", "Offsets.hpp"]
 
-# ─────────────────────────────────────────────
-#  Helpers
-# ─────────────────────────────────────────────
+
+
+
 
 def run(cmd, silent=False):
     """Run a shell command, return (success, stdout, stderr)."""
@@ -33,9 +33,9 @@ def gh_authenticated():
     ok, _, _ = run("gh auth status", silent=True)
     return ok
 
-# ─────────────────────────────────────────────
-#  Version + Stats detection
-# ─────────────────────────────────────────────
+
+
+
 
 def parse_offset_file(path):
     """Parse Offsets.hpp and return (version, offset_count, date_str)."""
@@ -49,20 +49,20 @@ def parse_offset_file(path):
     with open(path, "r", encoding="utf-8", errors="replace") as f:
         content = f.read()
 
-    # Version string
+
     m = re.search(r'version-([a-f0-9]+)', content)
     if m:
         version = m.group(0)
 
-    # Offset count from header comment
+
     m = re.search(r'Offsets found\s+(\d+)', content)
     if m:
         offset_count = int(m.group(1))
     else:
-        # Count inline hex values (0x......) as a proxy
+
         offset_count = len(re.findall(r'0x[0-9A-Fa-f]+', content))
 
-    # Date
+
     m = re.search(r'Date\s+([\d\-]+ [\d:]+)', content)
     if m:
         date_str = m.group(1)
@@ -75,9 +75,9 @@ def get_best_offset_file():
             return f
     return None
 
-# ─────────────────────────────────────────────
-#  Release creation
-# ─────────────────────────────────────────────
+
+
+
 
 def build_release_body(version, offset_count, date_str, roblox_ver):
     now = datetime.utcnow().strftime("%Y-%m-%d %H:%M UTC")
@@ -90,12 +90,12 @@ def build_release_body(version, offset_count, date_str, roblox_ver):
 | **Dump Date** | {date_str or now} |
 | **Release Tag** | `{version}` |
 
-### Files
+
 - `Offsets.hpp` — Full C++ header with all discovered memory offsets
 
-### Usage
+
 ```cpp
-#include "Offsets.hpp"
+
 // All offsets are relative. Use REBASE(offset) to get absolute addresses.
 uintptr_t luaV = REBASE(Offsets::luaV_execute);
 ```
@@ -112,7 +112,7 @@ def create_release_via_gh(tag, version, offset_count, date_str, roblox_ver, asse
     with open(body_file, "w", encoding="utf-8") as f:
         f.write(body)
 
-    # Check if tag already exists and delete it (update release)
+
     run(f'gh release delete "{tag}" --repo {REPO} --yes', silent=True)
 
     cmd = (
@@ -141,7 +141,7 @@ def create_release_via_git(tag, offset_file):
     """Fallback: commit + push, which triggers the GitHub Actions workflow."""
     print("[GIT] Falling back to git push (will trigger GitHub Actions release)...")
 
-    # Stage both offset files
+
     for f in OFFSET_FILES:
         if os.path.exists(f):
             run(f'git add "{f}"', silent=True)
@@ -168,9 +168,9 @@ def create_release_via_git(tag, offset_file):
         print("Make sure you have internet access and git credentials configured.")
         return False
 
-# ─────────────────────────────────────────────
-#  Main
-# ─────────────────────────────────────────────
+
+
+
 
 def main():
     print("=" * 60)
@@ -199,7 +199,7 @@ def main():
     print(f"[+] Release tag             : {tag}")
     print()
 
-    # Prefer GitHub CLI for immediate release creation
+
     if gh_available():
         if gh_authenticated():
             success = create_release_via_gh(tag, version, offset_count, date_str, roblox_ver, offset_file)

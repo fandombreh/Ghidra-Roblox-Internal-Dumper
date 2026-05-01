@@ -1,13 +1,13 @@
 #pragma once
 
-/*
-  Orion Dumper 
-   t
-   the best dumperbx LIVE-WindowsPlayer-version-acc4b74f79e743b9
-   Offsets found 47061
-   Date 2026-05-01 09:13:11
 
-*/
+
+
+
+
+
+
+
 
 #include <cstdint>
 #include <Windows.h>
@@ -47399,8 +47399,8 @@ namespace Offsets
     }
 
     namespace FLog {
-         // FLog_Default Not found
-         // DFLog_Default Not found
+         
+         
          inline constexpr uintptr_t Value = 0x8;
     }
 

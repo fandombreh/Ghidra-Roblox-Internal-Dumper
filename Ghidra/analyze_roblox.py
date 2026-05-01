@@ -1,6 +1,6 @@
-# Ghidra script to analyze Roblox structures comprehensively
-# @category RobloxDumper
-# @author RobloxDumper
+
+
+
 
 from ghidra.program.model.symbol import SourceType
 from ghidra.program.model.listing import CodeUnit
@@ -22,16 +22,16 @@ def find_all_vtables():
         start = block.getStart().getOffset()
         end = block.getEnd().getOffset()
         
-        # Scan for potential vtable patterns
+
         offset = start
         while offset < end - 32:
             try:
-                # Check if this looks like a function pointer
+
                 ptr = toAddr(getLong(offset))
                 if ptr and currentProgram.getMemory().contains(ptr):
                     func = getFunctionContaining(ptr)
                     if func:
-                        # Validate it's a vtable by checking next entries
+
                         valid_vtable = True
                         for i in range(1, 5):
                             if offset + i * 8 >= end:
@@ -53,7 +53,7 @@ def find_all_vtables():
                         if valid_vtable:
                             vtables.append(toAddr(offset))
                             print(f"Vtable at 0x{offset:X} (first function: {func.getName()})")
-                            offset += 0x100  # Skip ahead
+                            offset += 0x100
                             continue
             except:
                 pass
@@ -68,15 +68,15 @@ def analyze_rtti_comprehensive():
     
     rtti_found = []
     
-    # Microsoft RTTI patterns
-    patterns = [".?AV", ".?AU", ".?AV?"]  # Class, Union, nested class
+
+    patterns = [".?AV", ".?AU", ".?AV?"]
     
     for pattern in patterns:
         results = findBytes(pattern)
         if results:
             for addr in results:
                 rtti_found.append(addr)
-                # Try to read the type name
+
                 try:
                     type_name = ""
                     offset = addr.getOffset()
@@ -99,7 +99,7 @@ def find_all_string_references():
     
     target_strings = [
         "TextLabel", "TextButton", "Frame", "ScreenGui",
-        # Luau VM
+
         "lua_State", "luaL_", "lua_", "luau_", "Luau",
         "bytecode", "proto", "closure", "upvalue", "env",
         "getglobal", "setglobal", "getfield", "setfield",
@@ -108,15 +108,15 @@ def find_all_string_references():
         "GC", "garbage", "collect", "memory",
         "table", "array", "metatable", "__index", "__newindex",
         "thread", "coroutine", "resume", "yield",
-        # Network
+
         "NetworkClient", "NetworkServer", "NetworkReplicator", "PlayerReplicator",
         "RemoteEvent", "RemoteFunction", "UnreliableRemoteEvent",
-        # Services
+
         "RunService", "LogService", "Stats", "GuiService", "UserInputService",
         "ContextActionService", "HttpService", "AssetService", "TweenService",
         "ContentProvider", "PhysicsService", "Chat", "TextChatService",
         "VoiceChatService", "VRService", "ControllerService",
-        # Instance Members
+
         "archivable", "name", "parent", "className", "children",
         "position", "size", "cframe", "velocity", "transparency",
         "reflectance", "canCollide", "anchored", "locked",
@@ -144,7 +144,7 @@ def analyze_vtable_functions(vtable_addr):
     functions = []
     offset = vtable_addr.getOffset()
     
-    for i in range(50):  # Check up to 50 functions
+    for i in range(50):
         try:
             func_ptr = toAddr(getLong(offset + i * 8))
             if not func_ptr or not currentProgram.getMemory().contains(func_ptr):
@@ -155,7 +155,7 @@ def analyze_vtable_functions(vtable_addr):
                 functions.append((i, func_ptr, func))
                 print(f"  [{i}] 0x{func_ptr.getOffset():X} - {func.getName()}")
             else:
-                # Create function at this address
+
                 createFunction(func_ptr, f"vtable_func_{i}")
                 functions.append((i, func_ptr, getFunctionAt(func_ptr)))
                 print(f"  [{i}] 0x{func_ptr.getOffset():X} - (new function)")
@@ -177,19 +177,19 @@ def find_data_structures():
         start = block.getStart().getOffset()
         end = block.getEnd().getOffset()
         
-        # Look for patterns that suggest structures
-        # e.g., repeated pointer patterns
+
+
         offset = start
         while offset < end - 64:
             try:
-                # Check for structure-like pattern (multiple pointers)
+
                 ptr_count = 0
                 for i in range(8):
                     ptr = toAddr(getLong(offset + i * 8))
                     if ptr and currentProgram.getMemory().contains(ptr):
                         ptr_count += 1
                 
-                if ptr_count >= 4:  # At least 4 pointers in a row
+                if ptr_count >= 4:
                     structures.append(toAddr(offset))
                     print(f"Potential structure at 0x{offset:X} ({ptr_count} pointers)")
                     offset += 0x100
@@ -213,7 +213,7 @@ def analyze_luau_vm():
         "UpVal": None
     }
     
-    # Search for Luau-specific patterns
+
     for name in luau_patterns.keys():
         results = findBytes(name)
         if results:
@@ -228,15 +228,15 @@ def export_offsets_to_file():
     
     offsets = {}
     
-    # Collect vtables
+
     vtables = find_all_vtables()
     offsets["vtables"] = [v.getOffset() for v in vtables]
     
-    # Collect RTTI
+
     rtti = analyze_rtti_comprehensive()
     offsets["rtti"] = [r.getOffset() for r in rtti]
     
-    # Collect string references
+
     string_refs = find_all_string_references()
     offsets["string_refs"] = string_refs
     
@@ -247,7 +247,7 @@ def main():
     print("=== Comprehensive Roblox Structure Analysis ===")
     print()
     
-    # Run comprehensive analysis
+
     vtables = find_all_vtables()
     print()
     
@@ -263,7 +263,7 @@ def main():
     luau = analyze_luau_vm()
     print()
     
-    # Analyze first few vtables in detail
+
     if vtables:
         print("Analyzing first 3 vtables in detail:")
         for i, vtable in enumerate(vtables[:3]):

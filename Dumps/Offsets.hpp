@@ -1,13 +1,13 @@
 #pragma once
 
-/*
-  Orion Dumper 
-   t
-   the best dumperbx LIVE-WindowsPlayer-version-acc4b74f79e743b9
-   Offsets found 47061
-   Date 2026-05-01 09:13:11
 
-*/
+
+
+
+
+
+
+
 
 #include <cstdint>
 #include <Windows.h>
@@ -47399,8 +47399,8 @@ namespace Offsets
     }
 
     namespace FLog {
-         // FLog_Default Not found
-         // DFLog_Default Not found
+         
+         
          inline constexpr uintptr_t Value = 0x8;
     }
 
@@ -47708,4 +47708,4 @@ namespace Roblox
     inline auto ScriptContextResume = (uint64_t(__fastcall*)(uint64_t, YieldState*, YieldingLuaThread**, uint32_t, uint8_t, uint64_t))Offsets::ScriptContextResume;
 }
 
-// Test trigger
+
