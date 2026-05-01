@@ -42,11 +42,16 @@
 The repository includes a pre-generated `Offsets.hpp` containing the latest discovered addresses for the current Roblox version.
 
 **Current Version:** `LIVE-WindowsPlayer-version-acc4b74f79e743b9`  
-**Offsets Found:** `47,061`  
+**Pattern-Matched Functions:** `12+` (luaV_execute, luaH_new, luaH_get, luaC_step, etc.)  
+**String Offsets:** `400+` (Roblox services, Luau VM internals, Network structures)  
+**Structure Member Offsets:** `300+` (Instance, Luau, Player, Workspace, UI, Physics, etc.)  
 **Last Updated:** `2026-05-01`
 
 > [!TIP]
 > You can find the full list of offsets in [Dumps/Offsets.hpp](Dumps/Offsets.hpp). Use the `REBASE` macro to calculate absolute addresses at runtime.
+
+> [!NOTE]
+> Only pattern-matched named functions are included. Generic function prologue scanning has been removed to avoid garbage offsets.
 
 ---
 

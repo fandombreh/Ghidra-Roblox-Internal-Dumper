@@ -9,6 +9,7 @@
 #include <cctype>
 #include <iomanip>
 #include <chrono>
+#include <algorithm>
 #include "kernel_client.h"
 
 #pragma comment(lib, "psapi.lib")
@@ -577,97 +578,10 @@ public:
         
         delete[] buffer;
 
-        // Scan for function prologues (common x64 patterns)
-        std::cout << "Scanning for functions...\n";
-        int funcCount = 0;
-        std::vector<std::vector<uint8_t>> prologues = {
-            {0x48, 0x89, 0x5C, 0x24}, // mov [rsp+xx], rbx
-            {0x48, 0x8B, 0x05},       // mov rax, [rip+rel]
-            {0x48, 0x83, 0xEC},       // sub rsp, xx
-            {0x4C, 0x8B, 0xDC},       // mov r11, rsp
-            {0x40, 0x53},             // push rbx
-            {0x40, 0x55},             // push rbp
-            {0x48, 0x89, 0x4C, 0x24}, // mov [rsp+xx], rcx
-            {0x55, 0x48, 0x8B, 0xEC}, // push rbp; mov rbp, rsp
-            {0x48, 0x8B, 0xC4},       // mov rax, rsp
-            {0x48, 0x89, 0x5C, 0x24, 0x08}, // mov [rsp+8], rbx
-            {0x48, 0x89, 0x74, 0x24, 0x10}, // mov [rsp+10], rsi
-            {0x48, 0x89, 0x7C, 0x24, 0x18}, // mov [rsp+18], rdi
-            {0x41, 0x56},             // push r14
-            {0x41, 0x57},             // push r15
-            {0x41, 0x54},             // push r12
-            {0x41, 0x55},             // push r13
-            {0x48, 0x81, 0xEC},       // sub rsp, xxxxxxxx
-            {0x48, 0x8B, 0x84, 0x24}, // mov rax, [rsp+xx]
-            {0x48, 0x85, 0xC0},       // test rax, rax
-            {0x48, 0x83, 0xEC, 0x28}, // sub rsp, 28
-            {0x48, 0x83, 0xEC, 0x38}, // sub rsp, 38
-            {0x48, 0x83, 0xEC, 0x40}, // sub rsp, 40
-            {0x48, 0x83, 0xEC, 0x48}, // sub rsp, 48
-            {0x48, 0x83, 0xEC, 0x50}, // sub rsp, 50
-            {0x48, 0x83, 0xEC, 0x60}, // sub rsp, 60
-            {0x48, 0x83, 0xEC, 0x70}, // sub rsp, 70
-            {0x48, 0x83, 0xEC, 0x80}, // sub rsp, 80
-            {0x48, 0x8B, 0x0D},       // mov rcx, [rip+rel]
-            {0x48, 0x8B, 0x15},       // mov rdx, [rip+rel]
-            {0x48, 0x8B, 0x1D},       // mov rbx, [rip+rel]
-            {0x48, 0x8B, 0x25},       // mov rsp, [rip+rel]
-            {0x48, 0x8B, 0x2D},       // mov rbp, [rip+rel]
-            {0x48, 0x8B, 0x35},       // mov rsi, [rip+rel]
-            {0x48, 0x8B, 0x3D},       // mov rdi, [rip+rel]
-            {0x4C, 0x8B, 0x05},       // mov r8, [rip+rel]
-            {0x4C, 0x8B, 0x0D},       // mov r9, [rip+rel]
-            {0x4C, 0x8B, 0x15},       // mov r10, [rip+rel]
-            {0x4C, 0x8B, 0x1D},       // mov r11, [rip+rel]
-            {0x4C, 0x8B, 0x25},       // mov r12, [rip+rel]
-            {0x4C, 0x8B, 0x2D},       // mov r13, [rip+rel]
-            {0x4C, 0x8B, 0x35},       // mov r14, [rip+rel]
-            {0x4C, 0x8B, 0x3D},       // mov r15, [rip+rel]
-            {0x48, 0x89, 0x44, 0x24}, // mov [rsp+xx], rax
-            {0x48, 0x89, 0x54, 0x24}, // mov [rsp+xx], rdx
-            {0x48, 0x89, 0x4C, 0x24}, // mov [rsp+xx], rcx
-            {0x48, 0x89, 0x5C, 0x24}, // mov [rsp+xx], rbx
-            {0x48, 0x89, 0x6C, 0x24}, // mov [rsp+xx], rbp
-            {0x48, 0x89, 0x74, 0x24}, // mov [rsp+xx], rsi
-            {0x48, 0x89, 0x7C, 0x24}, // mov [rsp+xx], rdi
-            {0x4C, 0x89, 0x44, 0x24}, // mov [rsp+xx], r8
-            {0x4C, 0x89, 0x4C, 0x24}, // mov [rsp+xx], r9
-            {0x4C, 0x89, 0x54, 0x24}, // mov [rsp+xx], r10
-            {0x4C, 0x89, 0x5C, 0x24}, // mov [rsp+xx], r11
-            {0x4C, 0x89, 0x64, 0x24}, // mov [rsp+xx], r12
-            {0x4C, 0x89, 0x6C, 0x24}, // mov [rsp+xx], r13
-            {0x4C, 0x89, 0x74, 0x24}, // mov [rsp+xx], r14
-            {0x4C, 0x89, 0x7C, 0x24}  // mov [rsp+xx], r15
-        };
-        
-        char* funcBuffer = new char[bufferSize];
-        for (const auto& prologue : prologues) {
-            for (uintptr_t addr = scanStart; addr < scanEnd && addr >= scanStart; addr += bufferSize - prologue.size()) {
-                SIZE_T bytesRead;
-
-                if (ReadProcessMemory(hProcess, (LPCVOID)addr, funcBuffer, bufferSize, &bytesRead)) {
-                    for (size_t i = 0; i < bytesRead - prologue.size(); i++) {
-                        bool match = true;
-                        for (size_t j = 0; j < prologue.size(); j++) {
-                            if ((uint8_t)funcBuffer[i + j] != prologue[j]) {
-                                match = false;
-                                break;
-                            }
-                        }
-                        
-                        if (match) {
-                            std::string name = "Function_" + std::to_string(funcCount);
-                            RobloxClass cls;
-                            cls.name = name;
-                            cls.address = addr + i;
-                            classes[name] = cls;
-                            funcCount++;
-                        }
-                    }
-                }
-            }
-        }
-        delete[] funcBuffer;
+        // Generic prologue scanning removed.
+        // It produced tens of thousands of unnamed Function_N entries that were
+        // not usable and bloated the output. Only the named pattern-matched
+        // functions in the section below are kept.
 
         // Scan for specific named functions using patterns
         std::cout << "Scanning for critical named functions...\n";
@@ -806,20 +720,21 @@ done:
         file << "{\n";
 
         // Global/Main Offsets
-        auto writeOffset = [&](const std::string& name, bool useRebase = true, uintptr_t fallback = 0, const std::string& indent = "    ") {
+        // writeOffset: only writes the offset if it was ACTUALLY found at runtime by pattern scan.
+        // No hardcoded fallbacks — if not found, a comment is written instead.
+        auto writeOffset = [&](const std::string& name, bool useRebase = true, uintptr_t /*unused_fallback*/ = 0, const std::string& indent = "    ") {
             uintptr_t offset = 0;
             std::string funcName = "Function_" + name;
             if (functionOffsets.count(funcName)) {
                 offset = functionOffsets[funcName];
-            } else if (fallback != 0) {
-                offset = fallback;
             }
+            // No fallback: only real pattern-matched results are written
 
             if (offset != 0) {
                 file << indent << "const uintptr_t " << name << " = " << (useRebase ? "REBASE(" : "") << "0x" << std::hex << offset << (useRebase ? ")" : "") << ";\n";
                 return true;
             }
-            file << indent << "// " << name << " Not found\n";
+            file << indent << "// " << name << " = NOT_FOUND (pattern scan returned 0)\n";
             return false;
         };
 
@@ -829,10 +744,14 @@ done:
         writeOffset("GetLuaStateForInstance", true, 0x1C33F90);
         file << "\n";
 
+        // Named function offsets (pattern-matched only)
         file << "    namespace Functions {\n";
         for (const auto& [name, offset] : functionOffsets) {
             std::string cleanName = name;
             if (cleanName.find("Function_") == 0) cleanName = cleanName.substr(9);
+            // Skip any purely numeric names (leftover from old scanner)
+            bool isNumeric = !cleanName.empty() && std::all_of(cleanName.begin(), cleanName.end(), ::isdigit);
+            if (isNumeric) continue;
             file << "         inline constexpr uintptr_t " << cleanName << " = REBASE(0x" << std::hex << offset << ");\n";
         }
         file << "    }\n\n";
@@ -1178,13 +1097,7 @@ done:
         file << "         inline constexpr uintptr_t AnimationId = 0xd0;\n";
         file << "         inline constexpr uintptr_t StringLength = 0x10;\n";
         file << "         inline constexpr uintptr_t Value = 0xd0;\n";
-        writeOffset("FireTouchInterest", true, 0x83C610, "         ");
-        writeOffset("pushInstance", true, 0x1D29E60, "         ");
-        writeOffset("luaf_newproto", true, 0x43993D0, "         ");
-        writeOffset("IdentityPtr", true, 0x62D1088, "         ");
-        writeOffset("EnableLoadModule", true, 0x75200A8, "         ");
-        writeOffset("LockViolationInstanceCrash", true, 0x7517558, "         ");
-        writeOffset("CapabilitiesBypass", true, 0x75200A8, "         ");
+        
         file << "    }\n\n";
 
         file << "    namespace Network {\n";
